@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Min Kanban</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f0; min-height: 100vh; padding: 24px; }
+    h1 { font-size: 20px; font-weight: 500; color: #444; margin-bottom: 20px; }
+    .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .column { background: #eaeae4; border-radius: 12px; border: 1px solid #ddd; padding: 14px; min-height: 420px; }
+    .col-header { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #d5d5ce; }
+    .cards { display: flex; flex-direction: column; gap: 10px; min-height: 200px; }
+    .card { border-radius: 2px; padding: 10px 12px; font-size: 14px; font-weight: 600; line-height: 1.4; cursor: grab; position: relative; box-shadow: 2px 2px 0 rgba(0,0,0,0.13); transform: rotate(-0.8deg); transition: transform 0.15s, box-shadow 0.15s; word-break: break-word; }
+    .card:nth-child(even) { transform: rotate(0.6deg); }
+    .card:hover { transform: rotate(0deg) scale(1.02); box-shadow: 3px 3px 0 rgba(0,0,0,0.18); z-index: 10; }
+    .card.dragging { opacity: 0.4; cursor: grabbing; }
+    .col-todo .card    { background: #FFF176; color: #4a3f00; }
+    .col-doing .card   { background: #F48FB1; color: #4a0021; }
+    .col-done .card    { background: #A5D6A7; color: #0a3d0c; }
+    .card-delete { position: absolute; top: 4px; right: 6px; font-size: 18px; color: rgba(0,0,0,0.2); cursor: pointer; background: none; border: none; font-family: inherit; line-height: 1; display: none; }
+    .card:hover .card-delete { display: block; }
+    .card-delete:hover { color: rgba(0,0,0,0.5); }
+    .card-edit { width: 100%; font-size: 14px; font-weight: 600; border: none; outline: 2px solid rgba(0,0,0,0.3); border-radius: 2px; padding: 2px 4px; font-family: inherit; resize: none; background: rgba(255,255,255,0.5); }
+    .col-todo .card-edit { color: #4a3f00; }
+    .col-doing .card-edit { color: #4a0021; }
+    .col-done .card-edit { color: #0a3d0c; }
+    .hint { font-size: 11px; color: #aaa; text-align: center; margin-top: 16px; }
+    .add-area { margin-top: 12px; }
+    .add-btn { background: none; border: none; color: #aaa; font-size: 13px; cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 4px; font-family: inherit; }
+    .add-btn:hover { color: #666; }
+    .add-input { width: 100%; font-size: 13px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; background: #fff; resize: none; font-family: inherit; display: none; margin-top: 4px; }
+    .add-input:focus { outline: none; border-color: #aaa; }
+    .add-actions { display: none; gap: 6px; margin-top: 6px; }
+    .btn-save { font-size: 12px; padding: 5px 12px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; font-family: inherit; }
+    .btn-save:hover { background: #f0f0f0; }
+    .btn-cancel { font-size: 12px; padding: 5px 12px; border-radius: 6px; border: none; background: none; cursor: pointer; color: #888; font-family: inherit; }
+    .drop-zone { border: 2px dashed transparent; border-radius: 4px; transition: border-color 0.15s; }
+    .drop-zone.drag-over { border-color: #bbb; }
+    @media (max-width: 600px) { .board { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Min Kanban</h1>
+  <div class="board">
+    <div class="column col-todo">
+      <div class="col-header">Att göra</div>
+      <div class="cards drop-zone" id="cards-todo"></div>
+      <div class="add-area" id="add-todo">
+        <button class="add-btn" onclick="showAdd('todo')">+ Lägg till kort</button>
+        <textarea class="add-input" id="input-todo" rows="2" placeholder="Vad ska göras?"></textarea>
+        <div class="add-actions" id="actions-todo">
+          <button class="btn-save" onclick="saveCard('todo')">Lägg till</button>
+          <button class="btn-cancel" onclick="cancelAdd('todo')">Avbryt</button>
+        </div>
+      </div>
+    </div>
+    <div class="column col-doing">
+      <div class="col-header">Pågående</div>
+      <div class="cards drop-zone" id="cards-doing"></div>
+      <div class="add-area" id="add-doing">
+        <button class="add-btn" onclick="showAdd('doing')">+ Lägg till kort</button>
+        <textarea class="add-input" id="input-doing" rows="2" placeholder="Vad pågår?"></textarea>
+        <div class="add-actions" id="actions-doing">
+          <button class="btn-save" onclick="saveCard('doing')">Lägg till</button>
+          <button class="btn-cancel" onclick="cancelAdd('doing')">Avbryt</button>
+        </div>
+      </div>
+    </div>
+    <div class="column col-done">
+      <div class="col-header">Färdigt</div>
+      <div class="cards drop-zone" id="cards-done"></div>
+      <div class="add-area" id="add-done">
+        <button class="add-btn" onclick="showAdd('done')">+ Lägg till kort</button>
+        <textarea class="add-input" id="input-done" rows="2" placeholder="Vad är klart?"></textarea>
+        <div class="add-actions" id="actions-done">
+          <button class="btn-save" onclick="saveCard('done')">Lägg till</button>
+          <button class="btn-cancel" onclick="cancelAdd('done')">Avbryt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="hint">Dubbelklicka på ett kort för att redigera • Dra för att flytta • Hovra för att ta bort</p>
+
+  <script>
+    let data = { todo: [], doing: [], done: [] };
+    let dragCol = null, dragIdx = null;
+
+    function loadData() {
+      try { const s = localStorage.getItem('kanban'); if (s) data = JSON.parse(s); } catch(e) {}
+    }
+    function saveData() {
+      try { localStorage.setItem('kanban', JSON.stringify(data)); } catch(e) {}
+    }
+
+    function render() {
+      ['todo','doing','done'].forEach(col => {
+        const container = document.getElementById('cards-' + col);
+        container.innerHTML = '';
+        data[col].forEach((text, idx) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.draggable = true;
+          card.innerHTML = '<button class="card-delete" onclick="deleteCard(\'' + col + '\',' + idx + ')" title="Ta bort">×</button><span class="card-text">' + esc(text) + '</span>';
+          card.addEventListener('dblclick', function(e) {
+            if (e.target.classList.contains('card-delete')) return;
+            startEdit(card, col, idx);
+          });
+          card.addEventListener('dragstart', function() {
+            dragCol = col; dragIdx = idx;
+            setTimeout(() => card.classList.add('dragging'), 0);
+          });
+          card.addEventListener('dragend', function() {
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('dragging'));
+            document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
+          });
+          container.appendChild(card);
+        });
+        container.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('drag-over'); });
+        container.addEventListener('dragleave', function() { this.classList.remove('drag-over'); });
+        container.addEventListener('drop', function(e) {
+          e.preventDefault(); this.classList.remove('drag-over');
+          const targetCol = this.id.replace('cards-','');
+          if (dragCol !== null) { const t = data[dragCol].splice(dragIdx,1)[0]; data[targetCol].push(t); saveData(); render(); }
+        });
+      });
+    }
+
+    function startEdit(card, col, idx) {
+      card.draggable = false;
+      const textSpan = card.querySelector('.card-text');
+      const currentText = data[col][idx];
+      const ta = document.createElement('textarea');
+      ta.className = 'card-edit';
+      ta.value = currentText;
+      ta.rows = 2;
+      textSpan.replaceWith(ta);
+      ta.focus();
+      ta.select();
+      function finish() {
+        const val = ta.value.trim();
+        if (val) { data[col][idx] = val; saveData(); }
+        render();
+      }
+      ta.addEventListener('blur', finish);
+      ta.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.blur(); }
+        if (e.key === 'Escape') { ta.value = currentText; ta.blur(); }
+      });
+    }
+
+    function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function showAdd(col) {
+      document.getElementById('input-'+col).style.display = 'block';
+      document.getElementById('actions-'+col).style.display = 'flex';
+      document.querySelector('#add-'+col+' .add-btn').style.display = 'none';
+      document.getElementById('input-'+col).focus();
+    }
+    function cancelAdd(col) {
+      document.getElementById('input-'+col).style.display = 'none';
+      document.getElementById('actions-'+col).style.display = 'none';
+      document.getElementById('input-'+col).value = '';
+      document.querySelector('#add-'+col+' .add-btn').style.display = 'flex';
+    }
+    function saveCard(col) {
+      const val = document.getElementById('input-'+col).value.trim();
+      if (val) { data[col].push(val); saveData(); render(); }
+      cancelAdd(col);
+    }
+    function deleteCard(col, idx) { data[col].splice(idx,1); saveData(); render(); }
+
+    document.querySelectorAll('.add-input').forEach(inp => {
+      inp.addEventListener('keydown', function(e) {
+        const col = this.id.replace('input-','');
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveCard(col); }
+        if (e.key === 'Escape') cancelAdd(col);
+      });
+    });
+
+    loadData();
+    render();
+  </script>
+</body>
+</html>
