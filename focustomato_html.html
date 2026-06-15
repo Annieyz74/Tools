@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍅 FocusTomato</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; background: linear-gradient(135deg,#fff5f5 0%,#ffe8e8 50%,#ffd6d6 100%); font-family: 'Segoe UI', sans-serif; padding: 20px 16px; }
+  #app { max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 28px; font-weight: 900; color: #c92a2a; text-align: center; }
+  .header { text-align: center; margin-bottom: 16px; }
+  .badges { display: flex; justify-content: center; gap: 16px; margin-top: 8px; }
+  .badge { background: #fff; border-radius: 20px; padding: 4px 12px; font-size: 13px; color: #888; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .badge b { color: #e03131; }
+  .tabs { display: flex; background: #fff; border-radius: 16px; padding: 4px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .tab { flex: 1; padding: 8px 0; border: none; border-radius: 12px; cursor: pointer; background: transparent; color: #aaa; font-weight: 400; font-size: 14px; transition: all 0.2s; }
+  .tab.active { background: #FF6B6B; color: #fff; font-weight: 700; }
+  .card { background: #fff; border-radius: 24px; padding: 24px; box-shadow: 0 4px 20px rgba(255,107,107,0.13); }
+  .mode-btns { display: flex; gap: 8px; margin-bottom: 20px; justify-content: center; }
+  .mode-btn { padding: 6px 14px; border-radius: 20px; border: 2px solid #eee; background: #fafafa; color: #888; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .mode-btn.active { border-color: #FF6B6B; background: #FF6B6B; color: #fff; }
+  .timer-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; position: relative; width: 220px; height: 220px; margin: 0 auto 20px; }
+  .timer-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .timer-display { font-size: 42px; font-weight: 900; color: #c92a2a; margin-top: 4px; letter-spacing: 2px; }
+  .timer-label { font-size: 13px; color: #aaa; font-weight: 600; }
+  #timer-svg { transform: rotate(-90deg); }
+  .controls { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+  .btn-round { border-radius: 50%; border: 2px solid #eee; background: #fafafa; font-size: 20px; cursor: pointer; width: 48px; height: 48px; }
+  .btn-play { width: 72px; height: 72px; border-radius: 50%; border: none; background: #51CF66; color: #fff; font-size: 28px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.12); transition: all 0.2s; }
+  .btn-play.running { background: #FF6B6B; }
+  .session-info { text-align: center; margin-top: 14px; color: #ccc; font-size: 13px; }
+  .test-sound { text-align: center; margin-top: 12px; }
+  .test-sound button { padding: 8px 20px; border-radius: 20px; border: 2px solid #ffb3b3; background: #fff; color: #FF6B6B; font-weight: 600; font-size: 13px; cursor: pointer; }
+  .active-task { background: #fff5f5; border-radius: 12px; padding: 8px 14px; margin-bottom: 16px; border: 2px solid #ffcdd2; text-align: center; }
+  .active-task .at-label { font-size: 12px; color: #aaa; }
+  .active-task .at-title { font-weight: 700; color: #c92a2a; }
+  .active-task .at-count { font-size: 12px; color: #aaa; margin-top: 2px; }
+  /* Tasks */
+  .add-btn { width: 100%; padding: 12px; border-radius: 16px; border: 2px dashed #ffb3b3; background: #fff; color: #FF6B6B; font-weight: 700; font-size: 15px; cursor: pointer; margin-bottom: 12px; transition: all 0.2s; }
+  .add-btn.open { background: #FF6B6B; color: #fff; }
+  .add-form { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(255,107,107,0.07); }
+  .add-form input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 2px solid #ffe0e0; font-size: 15px; outline: none; margin-bottom: 10px; }
+  .priority-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+  .priority-btn { flex: 1; padding: 6px 0; border-radius: 10px; border: 2px solid #eee; background: #fafafa; font-size: 12px; font-weight: 600; cursor: pointer; color: #aaa; transition: all 0.2s; }
+  .est-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .est-row span { font-size: 13px; color: #888; }
+  .est-btn { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #eee; background: #fafafa; color: #aaa; font-weight: 700; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .est-btn.active { border-color: #FF6B6B; background: #FF6B6B; color: #fff; }
+  .submit-btn { width: 100%; padding: 10px; border-radius: 12px; border: none; background: #FF6B6B; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; }
+  .empty { text-align: center; padding: 40px; color: #ccc; }
+  .empty .icon { font-size: 48px; }
+  .task-card { background: #fff; border-radius: 16px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+  .task-card.active-card { box-shadow: 0 4px 20px rgba(255,107,107,0.2); border-color: #FF6B6B; }
+  .task-card .task-row { display: flex; justify-content: space-between; align-items: flex-start; }
+  .task-title { font-weight: 700; font-size: 15px; color: #333; margin-bottom: 4px; }
+  .priority-tag { border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+  .task-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .task-count { font-size: 13px; color: #aaa; }
+  .task-btns { display: flex; gap: 4px; }
+  .task-btn { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .btn-done { border: 2px solid #51CF66; background: #f0fff4; color: #51CF66; }
+  .btn-del { border: 2px solid #ffd6d6; background: #fff5f5; color: #ff8787; }
+  .progress-bar { margin-top: 8px; background: #f8e8e8; border-radius: 8px; height: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 8px; transition: width 0.5s; }
+  .active-label { text-align: center; margin-top: 6px; font-size: 12px; color: #FF6B6B; font-weight: 700; }
+  .completed-header { color: #ccc; font-size: 13px; font-weight: 600; margin-top: 16px; margin-bottom: 8px; }
+  .completed-card { background: #fafafa; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; opacity: 0.6; display: flex; justify-content: space-between; align-items: center; }
+  .completed-card span { text-decoration: line-through; color: #aaa; font-size: 14px; }
+  .del-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; }
+  /* Harvest */
+  .harvest-grid { display: flex; gap: 12px; margin-bottom: 24px; }
+  .harvest-card { flex: 1; border-radius: 16px; padding: 16px; text-align: center; }
+  .harvest-card .h-icon { font-size: 36px; }
+  .harvest-card .h-num { font-size: 32px; font-weight: 900; }
+  .harvest-card .h-label { font-size: 12px; color: #aaa; }
+  .tomato-box { background: #fff5f5; border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+  .tomato-box-label { font-size: 13px; color: #aaa; margin-bottom: 10px; font-weight: 600; }
+  .tomato-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .champion { background: linear-gradient(135deg,#FFF3cd,#FFE8a1); border-radius: 16px; padding: 16px; text-align: center; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <h1>🍅 FocusTomato</h1>
+    <div class="badges">
+      <span class="badge">🔥 Streak: <b id="streak-display">0</b> days</span>
+      <span class="badge">Today: <b id="today-display">0</b> 🍅</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('timer')">⏱ Timer</button>
+    <button class="tab" onclick="switchTab('tasks')">📋 Tasks</button>
+    <button class="tab" onclick="switchTab('harvest')">🌾 Harvest</button>
+  </div>
+
+  <!-- Timer Tab -->
+  <div id="tab-timer">
+    <div class="card">
+      <div class="mode-btns">
+        <button class="mode-btn active" onclick="switchMode('focus')">🍅 Focus</button>
+        <button class="mode-btn" onclick="switchMode('short')">☕ Short</button>
+        <button class="mode-btn" onclick="switchMode('long')">🛌 Long</button>
+      </div>
+      <div class="timer-wrap">
+        <svg id="timer-svg" width="220" height="220">
+          <circle cx="110" cy="110" r="90" fill="none" stroke="#f8e8e8" stroke-width="12"/>
+          <circle id="progress-ring" cx="110" cy="110" r="90" fill="none" stroke="#FF6B6B" stroke-width="12" stroke-linecap="round" stroke-dasharray="565.5" stroke-dashoffset="565.5"/>
+        </svg>
+        <div class="timer-inner">
+          <svg id="tomato-svg" width="90" height="90" viewBox="0 0 90 90">
+            <ellipse cx="45" cy="10" rx="6" ry="12" fill="#51CF66" transform="rotate(-20 45 10)"/>
+            <ellipse cx="45" cy="10" rx="6" ry="12" fill="#2f9e44" transform="rotate(20 45 10)"/>
+            <circle id="tomato-body1" cx="45" cy="52" r="34" fill="#FF6B6B"/>
+            <circle id="tomato-body2" cx="45" cy="54" r="34" fill="#FF6B6B"/>
+            <ellipse cx="32" cy="36" rx="7" ry="5" fill="white" opacity="0.35" transform="rotate(-30 32 36)"/>
+            <circle id="eye-l" cx="34" cy="50" r="5" fill="white"/>
+            <circle id="eye-r" cx="56" cy="50" r="5" fill="white"/>
+            <circle cx="35" cy="51" r="2.5" fill="#333"/>
+            <circle cx="57" cy="51" r="2.5" fill="#333"/>
+            <circle cx="36" cy="50" r="1" fill="white"/>
+            <circle cx="58" cy="50" r="1" fill="white"/>
+            <path id="tomato-mouth" d="M 30 60 Q 45 74 60 60" stroke="#c92a2a" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <ellipse cx="27" cy="60" rx="6" ry="4" fill="#ff8787" opacity="0.4"/>
+            <ellipse cx="63" cy="60" rx="6" ry="4" fill="#ff8787" opacity="0.4"/>
+            <text id="star-l" x="28" y="55" font-size="14" text-anchor="middle" display="none">⭐</text>
+            <text id="star-r" x="62" y="55" font-size="14" text-anchor="middle" display="none">⭐</text>
+          </svg>
+          <div class="timer-display" id="timer-display">25:00</div>
+          <div class="timer-label" id="timer-label">Focus Time!</div>
+        </div>
+      </div>
+      <div id="active-task-box" style="display:none" class="active-task">
+        <div class="at-label">Working on:</div>
+        <div class="at-title" id="at-title"></div>
+        <div class="at-count" id="at-count"></div>
+      </div>
+      <div class="controls">
+        <button class="btn-round" onclick="resetTimer()">↺</button>
+        <button class="btn-play" id="play-btn" onclick="toggleTimer()">▶</button>
+        <button class="btn-round" onclick="skipBreak()">⏭</button>
+      </div>
+      <div class="session-info" id="session-info">Session #1 · 1/4 until long break</div>
+      <div class="test-sound"><button onclick="playBeep()">🔔 Test sound</button></div>
+    </div>
+  </div>
+
+  <!-- Tasks Tab -->
+  <div id="tab-tasks" style="display:none">
+    <button class="add-btn" id="add-btn" onclick="toggleAddForm()">+ Add Task</button>
+    <div id="add-form" class="add-form" style="display:none">
+      <input type="text" id="task-input" placeholder="What are you working on? 🍅" onkeydown="if(event.key==='Enter')addTask()"/>
+      <div class="priority-btns">
+        <button class="priority-btn" id="p-high" onclick="setPriority('high')" style="border-color:#FF6B6B;background:#fff0f0;color:#FF6B6B;">🔥 High</button>
+        <button class="priority-btn" id="p-medium" onclick="setPriority('medium')" style="border-color:#F59F00;background:#fffbe6;color:#F59F00;">🟡 Medium</button>
+        <button class="priority-btn" id="p-low" onclick="setPriority('low')">🟢 Low</button>
+      </div>
+      <div class="est-row">
+        <span>🍅 Estimate:</span>
+        <button class="est-btn" onclick="setEstimate(1)">1</button>
+        <button class="est-btn active" onclick="setEstimate(2)">2</button>
+        <button class="est-btn" onclick="setEstimate(3)">3</button>
+        <button class="est-btn" onclick="setEstimate(4)">4</button>
+        <button class="est-btn" onclick="setEstimate(5)">5</button>
+        <button class="est-btn" onclick="setEstimate(6)">6</button>
+      </div>
+      <button class="submit-btn" onclick="addTask()">Add Task ✓</button>
+    </div>
+    <div id="task-list"></div>
+    <div id="completed-list"></div>
+  </div>
+
+  <!-- Harvest Tab -->
+  <div id="tab-harvest" style="display:none">
+    <div class="card">
+      <h2 style="text-align:center;color:#c92a2a;margin-bottom:20px;">🌾 Today's Harvest</h2>
+      <div class="harvest-grid">
+        <div class="harvest-card" style="background:linear-gradient(135deg,#fff5f5,#ffe8e8)">
+          <div class="h-icon">🍅</div>
+          <div class="h-num" id="h-today" style="color:#e03131">0</div>
+          <div class="h-label">Pomodoros Today</div>
+        </div>
+        <div class="harvest-card" style="background:linear-gradient(135deg,#fff9e6,#fff3cd)">
+          <div class="h-icon">🔥</div>
+          <div class="h-num" id="h-streak" style="color:#F59F00">0</div>
+          <div class="h-label">Day Streak</div>
+        </div>
+        <div class="harvest-card" style="background:linear-gradient(135deg,#f0fff4,#d3f9d8)">
+          <div class="h-icon">⏱</div>
+          <div class="h-num" id="h-hours" style="color:#2f9e44">0h</div>
+          <div class="h-label">Focus Time</div>
+        </div>
+      </div>
+      <div class="tomato-box">
+        <div class="tomato-box-label">Today's Tomatoes</div>
+        <div class="tomato-grid" id="tomato-grid"></div>
+      </div>
+      <div id="task-breakdown"></div>
+      <div id="champion-box"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MODES = { focus: 25*60, short: 5*60, long: 15*60 };
+const LABELS = { focus: "Focus Time!", short: "Short Break", long: "Long Break" };
+const PRIORITY_CFG = {
+  high: { label:"🔥 High", color:"#FF6B6B", bg:"#fff0f0" },
+  medium: { label:"🟡 Medium", color:"#F59F00", bg:"#fffbe6" },
+  low: { label:"🟢 Low", color:"#51CF66", bg:"#f0fff4" }
+};
+
+let mode = "focus", time = MODES.focus, running = false;
+let sessionCount = 0, todayCount = 0, streak = 0;
+let tasks = [], activeTaskId = null;
+let newPriority = "medium", newEstimate = 2;
+let interval = null;
+const circ = 2 * Math.PI * 90;
+
+// --- Storage ---
+function save() {
+  localStorage.setItem("pomo_tasks", JSON.stringify(tasks));
+  localStorage.setItem("pomo_session", sessionCount);
+  localStorage.setItem("pomo_today", JSON.stringify({ count: todayCount, date: new Date().toDateString() }));
+  localStorage.setItem("pomo_streak", JSON.stringify({ streak, date: new Date().toDateString() }));
+}
+
+function load() {
+  try {
+    const t = localStorage.getItem("pomo_tasks"); if (t) tasks = JSON.parse(t);
+    const s = localStorage.getItem("pomo_session"); if (s) sessionCount = parseInt(s);
+    const d = localStorage.getItem("pomo_today"); if (d) { const o = JSON.parse(d); if (o.date === new Date().toDateString()) todayCount = o.count; }
+    const st = localStorage.getItem("pomo_streak"); if (st) { const o = JSON.parse(st); const y = new Date(); y.setDate(y.getDate()-1); if (o.date === new Date().toDateString() || o.date === y.toDateString()) streak = o.streak; }
+  } catch(e) {}
+}
+
+// --- Audio ---
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.15, 0.3].forEach(t => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.3, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.1);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.15);
+    });
+  } catch(e) {}
+}
+
+// --- Tomato face ---
+function updateFace(state) {
+  const colors = { idle:"#FF6B6B", running:"#FF6B6B", break:"#81C784", done:"#FFD43B" };
+  const col = colors[state] || "#FF6B6B";
+  document.getElementById("tomato-body1").setAttribute("fill", col);
+  document.getElementById("tomato-body2").setAttribute("fill", col);
+  const mouth = document.getElementById("tomato-mouth");
+  if (state === "break") mouth.setAttribute("d", "M 33 62 Q 45 66 57 62");
+  else if (state === "running") mouth.setAttribute("d", "M 33 62 Q 45 70 57 62");
+  else mouth.setAttribute("d", "M 30 60 Q 45 74 60 60");
+  const r = state === "running" ? 4 : 5;
+  document.getElementById("eye-l").setAttribute("r", r);
+  document.getElementById("eye-r").setAttribute("r", r);
+  const show = state === "done" ? "" : "none";
+  document.getElementById("star-l").setAttribute("display", show);
+  document.getElementById("star-r").setAttribute("display", show);
+}
+
+// --- Timer ---
+function fmt(s) { return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
+
+function updateRing() {
+  const progress = 1 - time / MODES[mode];
+  const offset = circ * (1 - progress);
+  document.getElementById("progress-ring").style.strokeDashoffset = offset;
+}
+
+function updateDisplay() {
+  document.getElementById("timer-display").textContent = fmt(time);
+  document.getElementById("timer-label").textContent = LABELS[mode];
+  document.getElementById("session-info").textContent = `Session #${sessionCount+1} · ${sessionCount%4+1}/4 until long break`;
+  document.getElementById("streak-display").textContent = streak;
+  document.getElementById("today-display").textContent = todayCount;
+  updateRing();
+  updateActiveTaskBox();
+}
+
+function updateActiveTaskBox() {
+  const t = tasks.find(t => t.id === activeTaskId);
+  const box = document.getElementById("active-task-box");
+  if (t) {
+    box.style.display = "block";
+    document.getElementById("at-title").textContent = t.title;
+    document.getElementById("at-count").textContent = `${t.done}/${t.estimate} 🍅`;
+  } else { box.style.display = "none"; }
+}
+
+function toggleTimer() {
+  if (time === 0) { time = MODES[mode]; updateDisplay(); updateFace("idle"); return; }
+  running = !running;
+  document.getElementById("play-btn").textContent = running ? "⏸" : "▶";
+  document.getElementById("play-btn").className = "btn-play" + (running ? " running" : "");
+  updateFace(running ? "running" : "idle");
+  if (running) {
+    interval = setInterval(() => {
+      time--;
+      updateDisplay();
+      if (time <= 0) {
+        clearInterval(interval); running = false;
+        document.getElementById("play-btn").textContent = "↺";
+        document.getElementById("play-btn").className = "btn-play";
+        playBeep();
+        if (mode === "focus") {
+          sessionCount++; todayCount++;
+          updateFace("done");
+          tasks = tasks.map(t => t.id === activeTaskId ? {...t, done: t.done+1} : t);
+          save(); renderTasks(); updateDisplay(); updateHarvest();
+        } else { updateFace("idle"); }
+      }
+    }, 1000);
+  } else { clearInterval(interval); }
+}
+
+function resetTimer() {
+  clearInterval(interval); running = false; time = MODES[mode];
+  document.getElementById("play-btn").textContent = "▶";
+  document.getElementById("play-btn").className = "btn-play";
+  updateFace("idle"); updateDisplay();
+}
+
+function switchMode(m) {
+  clearInterval(interval); running = false; mode = m; time = MODES[m];
+  document.querySelectorAll(".mode-btn").forEach((b,i) => b.classList.toggle("active", ["focus","short","long"][i]===m));
+  document.getElementById("play-btn").textContent = "▶";
+  document.getElementById("play-btn").className = "btn-play";
+  updateFace(m === "focus" ? "idle" : "break");
+  updateDisplay();
+}
+
+function skipBreak() { switchMode(sessionCount % 4 === 3 ? "long" : "short"); }
+
+// --- Tabs ---
+function switchTab(tab) {
+  ["timer","tasks","harvest"].forEach(t => {
+    document.getElementById("tab-"+t).style.display = t===tab ? "block" : "none";
+    document.querySelectorAll(".tab")[["timer","tasks","harvest"].indexOf(t)].classList.toggle("active", t===tab);
+  });
+  if (tab === "harvest") updateHarvest();
+}
+
+// --- Tasks ---
+function toggleAddForm() {
+  const f = document.getElementById("add-form");
+  const btn = document.getElementById("add-btn");
+  const open = f.style.display === "none";
+  f.style.display = open ? "block" : "none";
+  btn.textContent = open ? "✕ Cancel" : "+ Add Task";
+  btn.className = "add-btn" + (open ? " open" : "");
+}
+
+function setPriority(p) {
+  newPriority = p;
+  Object.entries(PRIORITY_CFG).forEach(([k,v]) => {
+    const btn = document.getElementById("p-"+k);
+    if (k===p) { btn.style.borderColor=v.color; btn.style.background=v.bg; btn.style.color=v.color; }
+    else { btn.style.borderColor="#eee"; btn.style.background="#fafafa"; btn.style.color="#aaa"; }
+  });
+}
+
+function setEstimate(n) {
+  newEstimate = n;
+  document.querySelectorAll(".est-btn").forEach((b,i) => b.classList.toggle("active", i+1===n));
+}
+
+function addTask() {
+  const input = document.getElementById("task-input");
+  if (!input.value.trim()) return;
+  tasks.push({ id: Date.now(), title: input.value.trim(), priority: newPriority, estimate: newEstimate, done: 0, completed: false });
+  input.value = ""; save(); renderTasks();
+  toggleAddForm();
+}
+
+function completeTask(id) {
+  tasks = tasks.map(t => t.id===id ? {...t, completed:!t.completed} : t);
+  save(); renderTasks();
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id!==id);
+  if (activeTaskId===id) activeTaskId=null;
+  save(); renderTasks(); updateActiveTaskBox();
+}
+
+function setActiveTask(id) {
+  activeTaskId = activeTaskId===id ? null : id;
+  renderTasks(); updateActiveTaskBox();
+}
+
+function renderTasks() {
+  const order = {high:0,medium:1,low:2};
+  const incomplete = tasks.filter(t=>!t.completed).sort((a,b)=>order[a.priority]-order[b.priority]);
+  const completed = tasks.filter(t=>t.completed);
+
+  const list = document.getElementById("task-list");
+  list.innerHTML = incomplete.length===0 ? `<div class="empty"><div class="icon">🌱</div><div style="margin-top:8px">No tasks yet! Add one above.</div></div>` :
+    incomplete.map(task => {
+      const p = PRIORITY_CFG[task.priority];
+      const pct = Math.min(task.done/task.estimate,1)*100;
+      const isActive = activeTaskId===task.id;
+      return `<div class="task-card${isActive?" active-card":""}" onclick="setActiveTask(${task.id})">
+        <div class="task-row">
+          <div>
+            <div class="task-title">${task.title}</div>
+            <span class="priority-tag" style="background:${p.bg};color:${p.color}">${p.label}</span>
+          </div>
+          <div class="task-actions">
+            <div class="task-count">${task.done}/${task.estimate} 🍅</div>
+            <div class="task-btns">
+              <button class="task-btn btn-done" onclick="event.stopPropagation();completeTask(${task.id})">✓</button>
+              <button class="task-btn btn-del" onclick="event.stopPropagation();deleteTask(${task.id})">✕</button>
+            </div>
+          </div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct>=100?'#51CF66':'#FF6B6B'}"></div></div>
+        ${isActive?'<div class="active-label">▶ ACTIVE — tap to deselect</div>':''}
+      </div>`;
+    }).join("");
+
+  const cl = document.getElementById("completed-list");
+  cl.innerHTML = completed.length===0 ? "" : `<div class="completed-header">✅ Completed (${completed.length})</div>` +
+    completed.map(t => `<div class="completed-card"><span>${t.title}</span><button class="del-btn" onclick="deleteTask(${t.id})">✕</button></div>`).join("");
+}
+
+// --- Harvest ---
+function updateHarvest() {
+  document.getElementById("h-today").textContent = todayCount;
+  document.getElementById("h-streak").textContent = streak;
+  document.getElementById("h-hours").textContent = Math.round(todayCount*25/60*10)/10 + "h";
+  const grid = document.getElementById("tomato-grid");
+  grid.innerHTML = todayCount===0 ? `<span style="color:#ddd;font-size:13px">No tomatoes yet... start focusing! 🌱</span>`
+    : Array.from({length:todayCount}).map(()=>`<span style="font-size:22px">🍅</span>`).join("");
+  const breakdown = document.getElementById("task-breakdown");
+  const done = tasks.filter(t=>t.done>0);
+  breakdown.innerHTML = done.length===0 ? "" : `<div style="font-size:13px;color:#aaa;margin-bottom:10px;font-weight:600">Task Breakdown</div>` +
+    done.map(t => { const pct=Math.min(t.done/t.estimate,1)*100; return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600;color:#555">${t.title}</span><span style="font-size:12px;color:#aaa">${t.done}/${t.estimate} 🍅</span></div><div style="background:#f0e8e8;border-radius:8px;height:8px"><div style="width:${pct}%;height:100%;background:${pct>=100?'#51CF66':'#FF6B6B'};border-radius:8px;transition:width 0.5s"></div></div></div>`; }).join("");
+  document.getElementById("champion-box").innerHTML = sessionCount>=8 ? `<div class="champion"><div style="font-size:32px">🏆</div><div style="font-weight:700;color:#8B6914">Productivity Champion!</div><div style="font-size:13px;color:#A0820A">You've completed ${sessionCount} sessions. Amazing work!</div></div>` : "";
+}
+
+// Init
+load(); updateDisplay(); updateFace("idle"); renderTasks();
+</script>
+</body>
+</html>
